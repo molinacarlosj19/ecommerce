@@ -3,16 +3,14 @@ package com.ecommerce.project.service;
 import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.model.Product;
-import com.ecommerce.project.payload.CategoryDTO;
 import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.payload.ProductResponse;
 import com.ecommerce.project.repositories.CategoryRepository;
 import com.ecommerce.project.repositories.ProductRepository;
+import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,10 +24,11 @@ public class ProducServiceImpl implements ProductService{
     @Autowired
     private ModelMapper modelMapper;
     @Override
-    public ProductDTO addProduct(Long categoryId, Product product) {
+    public ProductDTO addProduct(Long categoryId, ProductDTO productDTO) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Category", "id", categoryId));
+        Product product = modelMapper.map(productDTO, Product.class);
         product.setImage("images/");
         product.setCategory(category);
         double specialPrice = product.getPrice() -
@@ -76,17 +75,26 @@ public class ProducServiceImpl implements ProductService{
     }
 
     @Override
-    public ProductDTO updateProduct(Product product, Long productId) {
+    public ProductDTO updateProduct(@Valid ProductDTO productDTO, Long productId) {
         Product productFromDB = productRepository.findById(productId)
                 .orElseThrow(() ->new ResourceNotFoundException("Product", "id", productId));
+        Product product = modelMapper.map(productFromDB, Product.class);
         productFromDB.setProductName(product.getProductName());
         productFromDB.setDescription(product.getDescription());
         productFromDB.setQuantity(product.getQuantity());
         productFromDB.setDiscount(product.getDiscount());
         productFromDB.setPrice(product.getPrice());
-        product.setSpecialPrice(product.getSpecialPrice());
+        productDTO.setSpecialPrice(product.getSpecialPrice());
 
         Product savedProduct = productRepository.save(productFromDB);
         return  modelMapper.map(savedProduct, ProductDTO.class);
+    }
+
+    @Override
+    public ProductDTO deleteProduct(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+        productRepository.delete(product);
+        return modelMapper.map(product, ProductDTO.class);
     }
 }
